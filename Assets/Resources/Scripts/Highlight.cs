@@ -3,73 +3,72 @@ using System.Collections;
 
 public class Highlight : MonoBehaviour {
 
-	// Use this for initialization
-	void Start () {
-		
-	}
+	//this behavior attaches to both spaces and vehicles, and governs their changes in size, color, and transparency.
 
 	public float changeDuration;
 
-	public void setDuration(float newD){
-		changeDuration = newD;
+	public float currentAlpha;
+
+	float[] spaceScaleRange = {0.8f, 1};
+	float spaceHaloSize = 0.2f;
+
+	float[] vehicleScaleRange = {0.5f, 0.6f};
+	float[] vehicleTranRange = {0.5f, 1};
+
+	void Start(){
+		changeDuration = GameObject.Find ("GameController").GetComponent<GameControl> ().turnLength / 2f;
 	}
 
-	IEnumerator rescale (float newScale){
+	public void growVehicle(){ StopCoroutine ("scaleVehicle"); StartCoroutine ("scaleVehicle",1); }
+	public void shrinkVehicle(){ StopCoroutine ("scaleVehicle"); StartCoroutine ("scaleVehicle",0); }
+
+	public void growSpace(){ StopCoroutine ("scaleSpace"); StartCoroutine ("scaleSpace",1); }
+	public void shrinkSpace(){ StopCoroutine ("scaleSpace"); StartCoroutine ("scaleSpace",0); }
+	public void updateSpaceColor(Color newColor){ StopCoroutine ("changeColor"); StartCoroutine ("changeColor", newColor); }
+
+	IEnumerator scaleVehicle(int index){
 		Vector3 startScale = gameObject.transform.localScale;
-		Vector3 targetScale = new Vector3 (newScale, newScale, newScale);
+		Color startColor = gameObject.GetComponent<Renderer> ().material.color;
+		Vector3 targetScale = new Vector3 (vehicleScaleRange [index], vehicleScaleRange [index], vehicleScaleRange [index]);
+		Color targetColor = gameObject.GetComponent<Renderer> ().material.color;
+		targetColor.a = vehicleTranRange [index];
 		for (float t = 0; t < changeDuration; t += Time.deltaTime) {
 			gameObject.transform.localScale = Vector3.Lerp (startScale, targetScale, t / changeDuration);
+			gameObject.GetComponent<Renderer> ().material.color = Color.Lerp (startColor, targetColor, t / changeDuration);
 			yield return null;
 		}
 		gameObject.transform.localScale = targetScale;
+		gameObject.GetComponent<Renderer> ().material.color = targetColor;
 	}
 
-	IEnumerator recolor (Color newColor){
-		Color initial = gameObject.GetComponent<Light> ().color;
-		float[] startColor = {initial.r, initial.b, initial.g};
-		float[] targetColor = {newColor.r, newColor.b, newColor.g};
-		for (float t = 0; t < changeDuration; t += Time.deltaTime){
-			Color tempColor = new Color (Mathf.Lerp (startColor [0], targetColor [0], t / changeDuration),
-			                            Mathf.Lerp (startColor [1], targetColor [1], t / changeDuration),
-			                            Mathf.Lerp (startColor [2], targetColor [2], t / changeDuration));
-			gameObject.GetComponent<Light> ().color = tempColor;
+	IEnumerator scaleSpace(int index){
+		Vector3 startScale = gameObject.transform.localScale;
+		float startLRange = gameObject.GetComponent<Light> ().range;
+		Vector3 targetScale = new Vector3 (spaceScaleRange [index], spaceScaleRange [index], spaceScaleRange [index]);
+		float targetLRange = spaceScaleRange[index] + spaceHaloSize;
+		for (float t = 0; t < changeDuration; t += Time.deltaTime) {
+			gameObject.transform.localScale = Vector3.Lerp (startScale, targetScale, t / changeDuration);
+			gameObject.GetComponent<Light> ().range = Mathf.Lerp (startLRange, targetLRange, t / changeDuration);
 			yield return null;
 		}
-		gameObject.GetComponent<Light> ().color = newColor;
+		gameObject.transform.localScale = targetScale;
+		gameObject.GetComponent<Light> ().range = targetLRange;
+		yield break;
 	}
 
-	IEnumerator rerange (float newRange){
-		float startRange = gameObject.GetComponent<Light> ().range;
-		for (float t = 0; t < changeDuration; t += Time.time) {
-			float tempRange = Mathf.Lerp (startRange, newRange, t / changeDuration);
-			gameObject.GetComponent<Light> ().range = tempRange;
-			if (tempRange > gameObject.transform.localScale.x)
-				gameObject.GetComponent<Light>().enabled = true;
-			else
-				gameObject.GetComponent<Light> ().enabled = false;
+	IEnumerator changeColor (Color targetColor){
+		Color startColor = gameObject.GetComponent<Light> ().color;
+		for (float t = 0; t < changeDuration; t += Time.deltaTime) {
+			gameObject.GetComponent<Light> ().color = Color.Lerp (startColor, targetColor, t / changeDuration);
+			gameObject.GetComponent<Light> ().intensity = Mathf.Lerp (startColor.a, 2*targetColor.a, t / changeDuration);
 			yield return null;
 		}
-		gameObject.GetComponent<Light> ().range = newRange;
+		gameObject.GetComponent<Light> ().color = targetColor;
+		gameObject.GetComponent<Light> ().intensity = targetColor.a;
+		yield break;
 	}
 
-	public void expand(Color newColor){
-		StopAllCoroutines ();
-		StartCoroutine (rerange (1.2f));
-		StartCoroutine (rescale (1f));
-		StartCoroutine (recolor (newColor));
-	}
-
-	public void contract(Color newColor){
-		StopAllCoroutines ();
-		StartCoroutine (rerange (0f));
-		StartCoroutine (rescale (0.8f));
-		StartCoroutine (recolor (newColor));
-	}
-
-
-	
-	// Update is called once per frame
-	void Update () {
-	
+	void Update(){
+		currentAlpha = gameObject.GetComponent<Renderer> ().material.color.a;
 	}
 }

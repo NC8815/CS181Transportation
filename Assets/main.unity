@@ -334,7 +334,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8445fdccb90c398419ab810117ca01f0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  turnLength: 2
+  turnLength: 1.5
+  activeVehicle: {fileID: 0}
 --- !u!4 &1685091012
 Transform:
   m_ObjectHideFlags: 0
